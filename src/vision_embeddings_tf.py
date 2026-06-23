@@ -29,11 +29,11 @@ def load_and_preprocess_image(image_path, target_size=(224, 224)):
     - np.array: Preprocessed image.
     """
     # TODO: Open the image using PIL Image.open and convert it to RGB format
-    img = None
+    img = Image.open(image_path).convert("RGB")
     # TODO: Resize the image to the target size
-    img = None
+    img = img.resize(target_size)
     # TODO: Convert the image to a numpy array and scale the pixel values to [0, 1]
-    img = None
+    img = np.array(img).astype("float32") / 255.0
 
     return img
 
@@ -93,7 +93,15 @@ class FoundationalCVModel:
         
         if backbone == 'resnet50':
             # TODO: Load the ResNet50 model from tensorflow.keras.applications
-            self.base_model = None
+            self.base_model = ResNet50(
+                weights='imagenet',
+                include_top=False,
+                input_tensor=input_layer
+            )
+        elif backbone == 'convnextv2_tiny':
+            self.base_model = TFConvNextV2Model.from_pretrained(
+                "facebook/convnextv2-tiny-1k-224"
+            )
         elif backbone == 'resnet101':
             # TODO: Load the ResNet101 model from tensorflow.keras.applications
             self.base_model = None
@@ -137,7 +145,7 @@ class FoundationalCVModel:
         
         if mode == 'eval':
             # TODO: Set the model to evaluation mode (non-trainable)
-            pass
+            self.base_model.trainable = False
         
         # Take into account the model's input requirements. In models from transformers, the input is channels first, but in models from keras.applications, the input is channels last.
         # Aditionally, the output of the model is different in both cases, we need to get the pooling of the output layer.
@@ -146,17 +154,18 @@ class FoundationalCVModel:
         if backbone in ['vit_base', 'vit_large', 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']:
             # TODO: Adjust the input for channels first models within the model
             # You can use the perm argument of tf.transpose to permute the dimensions of the input tensor
-            input_layer_transposed = None
+            input_layer_transposed = tf.transpose(input_layer, perm=[0, 3, 1, 2])
             # TODO: Get the pooling output of the model "pooler_output"
-            outputs = None
+            outputs = self.base_model(input_layer_transposed).pooler_output
         # If is a model from keras.applications:
         else:
             # TODO: Get the pooling output of the model
             # In this case the pooling layer is not included in the model, we can use a pooling layer such as GlobalAveragePooling2D
-            outputs = None
+            x = self.base_model.output
+            outputs = GlobalAveragePooling2D()(x)
         
         # TODO: Create the final model with the input layer and the pooling output
-        self.model = Model()
+        self.model = Model(inputs=input_layer, outputs=outputs)
         
     def get_output_shape(self):
         """
@@ -184,7 +193,7 @@ class FoundationalCVModel:
             Predictions or features from the model for the given images.
         """
         # TODO: Perform a forward pass through the model and return the predictions
-        predictions = None
+        predictions = self.model.predict(images, verbose=0)
         return predictions
 
 
