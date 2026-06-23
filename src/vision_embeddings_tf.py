@@ -8,7 +8,7 @@ from tensorflow.keras.applications import (
 from tensorflow.keras.layers import Input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras.layers import GlobalAveragePooling2D, Lambda
 import tensorflow as tf
 from PIL import Image
 
@@ -154,7 +154,9 @@ class FoundationalCVModel:
         if backbone in ['vit_base', 'vit_large', 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']:
             # TODO: Adjust the input for channels first models within the model
             # You can use the perm argument of tf.transpose to permute the dimensions of the input tensor
-            input_layer_transposed = tf.transpose(input_layer, perm=[0, 3, 1, 2])
+            input_layer_transposed = Lambda(
+                lambda x: tf.transpose(x, perm=[0, 3, 1, 2])
+            )(input_layer)
             # TODO: Get the pooling output of the model "pooler_output"
             outputs = self.base_model(input_layer_transposed).pooler_output
         # If is a model from keras.applications:
