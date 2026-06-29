@@ -114,9 +114,6 @@ class FoundationalCVModel:
         elif backbone == 'inception_v3':
             # TODO: Load the InceptionV3 model from tensorflow.keras.applications
             self.base_model = None
-        elif backbone == 'convnextv2_tiny':
-            # TODO: Load the ConvNeXtV2 Tiny model from transformers
-            self.base_model = None
         elif backbone == 'convnextv2_base':
             # TODO: Load the ConvNeXtV2 Base model from transformers
             self.base_model = None
@@ -151,23 +148,14 @@ class FoundationalCVModel:
         # Aditionally, the output of the model is different in both cases, we need to get the pooling of the output layer.
         
         # If is a model from transformers:
-        if backbone in ['vit_base', 'vit_large', 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']:
-            # TODO: Adjust the input for channels first models within the model
-            # You can use the perm argument of tf.transpose to permute the dimensions of the input tensor
-            input_layer_transposed = Lambda(
-                lambda x: tf.transpose(x, perm=[0, 3, 1, 2])
-            )(input_layer)
-            # TODO: Get the pooling output of the model "pooler_output"
-            outputs = self.base_model(input_layer_transposed).pooler_output
-        # If is a model from keras.applications:
+        self.is_transformer = backbone in ['vit_base', 'vit_large', 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']
+
+        if self.is_transformer:
+            self.model = self.base_model
         else:
-            # TODO: Get the pooling output of the model
-            # In this case the pooling layer is not included in the model, we can use a pooling layer such as GlobalAveragePooling2D
             x = self.base_model.output
             outputs = GlobalAveragePooling2D()(x)
-        
-        # TODO: Create the final model with the input layer and the pooling output
-        self.model = Model(inputs=input_layer, outputs=outputs)
+            self.model = Model(inputs=input_layer, outputs=outputs)
         
     def get_output_shape(self):
         """
@@ -195,6 +183,17 @@ class FoundationalCVModel:
             Predictions or features from the model for the given images.
         """
         # TODO: Perform a forward pass through the model and return the predictions
+        if self.is_transformer:
+            pixel_values = tf.transpose(images, perm=[0, 3, 1, 2])
+            outputs = self.model(pixel_values=pixel_values, training=False)
+
+            if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
+                predictions = outputs.pooler_output
+            else:
+                predictions = tf.reduce_mean(outputs.last_hidden_state, axis=1)
+
+            return predictions.numpy()
+
         predictions = self.model.predict(images, verbose=0)
         return predictions
 
