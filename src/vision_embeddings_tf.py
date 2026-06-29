@@ -37,6 +37,22 @@ def load_and_preprocess_image(image_path, target_size=(224, 224)):
 
     return img
 
+class TransformerWrapper:
+    def __init__(self, base_model, output_dim):
+        self.base_model = base_model
+        self.input_shape = (None, 224, 224, 3)
+        self.output_shape = (None, output_dim)
+
+    def predict(self, images, verbose=0):
+        pixel_values = tf.transpose(images, perm=[0, 3, 1, 2])
+        outputs = self.base_model(pixel_values=pixel_values, training=False)
+
+        if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
+            embeddings = outputs.pooler_output
+        else:
+            embeddings = tf.reduce_mean(outputs.last_hidden_state, axis=1)
+
+        return embeddings.numpy()
 
 class FoundationalCVModel:
     """
@@ -151,7 +167,7 @@ class FoundationalCVModel:
         self.is_transformer = backbone in ['vit_base', 'vit_large', 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']
 
         if self.is_transformer:
-            self.model = self.base_model
+            self.model = TransformerWrapper(self.base_model, output_dim=768)
         else:
             x = self.base_model.output
             outputs = GlobalAveragePooling2D()(x)
@@ -183,17 +199,6 @@ class FoundationalCVModel:
             Predictions or features from the model for the given images.
         """
         # TODO: Perform a forward pass through the model and return the predictions
-        if self.is_transformer:
-            pixel_values = tf.transpose(images, perm=[0, 3, 1, 2])
-            outputs = self.model(pixel_values=pixel_values, training=False)
-
-            if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
-                predictions = outputs.pooler_output
-            else:
-                predictions = tf.reduce_mean(outputs.last_hidden_state, axis=1)
-
-            return predictions.numpy()
-
         predictions = self.model.predict(images, verbose=0)
         return predictions
 

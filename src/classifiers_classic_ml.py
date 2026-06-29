@@ -58,9 +58,10 @@ def visualize_embeddings(X_train, X_test, y_train, y_test, plot_type='2D', metho
     if plot_type == '3D':
         if method == 'PCA':
             # TODO: Create an instance of PCA for 3D visualization and fit it on the training data
-            red = None
+            red = PCA(n_components=3)
+            red.fit(X_train)
             # TODO: Use the trained model to transform the test data
-            reduced_embeddings = None
+            reduced_embeddings = red.transform(X_test)
         elif method == 't-SNE':
             # TODO: Implement t-SNE for 3D visualization
             red = None
@@ -79,9 +80,10 @@ def visualize_embeddings(X_train, X_test, y_train, y_test, plot_type='2D', metho
     else:
         if method == 'PCA':
             # TODO: Create an instance of PCA for 2D visualization and fit it on the training data
-            red = None
+            red = PCA(n_components=2)
+            red.fit(X_train)
             # TODO: Use the trained model to transform the test data
-            reduced_embeddings = None
+            reduced_embeddings = red.transform(X_test)
         elif method == 't-SNE':
             # TODO: Implement t-SNE for 2D visualization
             red = None
@@ -231,16 +233,23 @@ def train_and_evaluate_model(X_train, X_test, y_train, y_test, models=None, test
         # TODO: Implement the ML models
         # The models should be a list of tuples, where each tuple contains the model name and the model instance
         # Example: models = [ ('Model 1', Model1()), ('Model2', Model2()), ... ('ModelN', ModelN()) ]
-        models = []
+        models = [
+            ("RandomForest", RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)),
+            ("LogisticRegression", LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)),
+        ]
 
     for name, model in models:
         
         print('#'*20, f' {name} ', '#'*20)
         # TODO: Train the model on the training
-        
+        model.fit(X_train, y_train)
         
         # TODO: Evaluate the model on the test set using the test_model function
         if test:
-            accuracy, precision, recall, f1 = None, None, None, None
+            accuracy, precision, recall, f1 = test_model(X_test, y_test, model)
+            print(f"Accuracy: {accuracy:.4f}")
+            print(f"Precision: {precision:.4f}")
+            print(f"Recall: {recall:.4f}")
+            print(f"F1-score: {f1:.4f}")
         
     return models
